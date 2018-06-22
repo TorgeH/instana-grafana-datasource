@@ -1379,8 +1379,7 @@ export default {
     "waitstats.ASYNC_NETWORK_IO.wait_time_ms": "Async Network IO",
     "waitstats.CXPACKET.wait_time_ms": "CX-Packet",
     "waitstats.WRITELOG.wait_time_ms": "Writelog",
-    "perfcounters.sqlserver:general statistics\\logins/sec": "Logins/sec.",
-    "perfcounters.sqlserver:general statistics\\user connections": "Connections"
+    "generalstats._total.user_connections": "Connections"
     }
   },
   "mule": {

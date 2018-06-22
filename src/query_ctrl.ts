@@ -22,13 +22,16 @@ export class InstanaQueryCtrl extends QueryCtrl {
   constructor($scope, $injector, private templateSrv, private backendSrv) {
     super($scope, $injector);
 
-
+    this.target.pluginId = this.panelCtrl.pluginId;
     this.entitySelectionText = this.EMPTY_DROPDOWN_TEXT;
     this.metricSelectionText = this.EMPTY_DROPDOWN_TEXT;
 
     if (this.target.entityQuery) {
-      this.onFilterChange(false);
-      this.onEntityTypeSelect(false);
+      this.onFilterChange(false).then(_ => {
+        if (this.target.entityType) {
+          this.onEntityTypeSelect(false);
+        }
+      });
     }
     if (this.target.metric) {
       this.target.metric = _.find(this.availableMetrics, m => m.key === this.target.metric.key);
