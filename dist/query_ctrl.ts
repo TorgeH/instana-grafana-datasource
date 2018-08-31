@@ -19,7 +19,7 @@ export class InstanaQueryCtrl extends QueryCtrl {
   };
 
   /** @ngInject **/
-  constructor($scope, $injector, private templateSrv, private backendSrv) {
+  constructor($scope, $injector, private templateSrv, private backendSrv, private $q) {
     super($scope, $injector);
 
     this.target.pluginId = this.panelCtrl.pluginId;
@@ -27,14 +27,15 @@ export class InstanaQueryCtrl extends QueryCtrl {
     this.metricSelectionText = this.EMPTY_DROPDOWN_TEXT;
 
     if (this.target.entityQuery) {
-      this.onFilterChange(false).then(_ => {
+      this.onFilterChange(false).then(() => {
         if (this.target.entityType) {
           this.onEntityTypeSelect(false);
         }
+
+        if (this.target && this.target.metric) {
+          this.target.metric = _.find(this.availableMetrics, m => m.key === this.target.metric.key);
+        }
       });
-    }
-    if (this.target.metric) {
-      this.target.metric = _.find(this.availableMetrics, m => m.key === this.target.metric.key);
     }
   }
 
@@ -45,17 +46,18 @@ export class InstanaQueryCtrl extends QueryCtrl {
       this.target.metric = null;
       this.entitySelectionText = this.EMPTY_DROPDOWN_TEXT;
       this.metricSelectionText = this.EMPTY_DROPDOWN_TEXT;
+      return this.$q.resolve();
     } else {
-      return this.datasource.request(
-        'GET', '/api/snapshots/types?q=' + encodeURIComponent(this.target.entityQuery) +
-        '&time=' + new Date().getTime())
+      const url = `/api/snapshots/types?q=${encodeURIComponent(this.target.entityQuery)}` +
+        `&time=${Date.now()}&newApplicationModelEnabled=${this.datasource.newApplicationModelEnabled === true}`;
+      return this.datasource.request('GET', url)
         .then(
           response => {
             this.target.queryIsValid = true;
             this.uniqueEntityTypes =
               _.filter(
                 response.data,
-                entityType => metricsDefinition[entityType] && metricsDefinition[entityType].label != null);
+                entityType => metricsDefinition[entityType.toLowerCase()] && metricsDefinition[entityType.toLowerCase()].label != null);
             this.entitySelectionText = this.uniqueEntityTypes.length > 0
               ? 'Please select (' + this.uniqueEntityTypes.length + ')'
               : this.EMPTY_DROPDOWN_TEXT;
@@ -81,7 +83,7 @@ export class InstanaQueryCtrl extends QueryCtrl {
   onEntityTypeSelect(refresh) {
     this.availableMetrics =
       _.map(
-        this.metricsDefinition[this.target.entityType].metrics,
+        this.metricsDefinition[this.target.entityType.toLowerCase()].metrics,
         (value, key) => {
           return {
             "key": key,

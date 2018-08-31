@@ -23,11 +23,12 @@ System.register(['lodash', 'app/plugins/sdk', './css/query_editor.css!', './metr
             InstanaQueryCtrl = (function (_super) {
                 __extends(InstanaQueryCtrl, _super);
                 /** @ngInject **/
-                function InstanaQueryCtrl($scope, $injector, templateSrv, backendSrv) {
+                function InstanaQueryCtrl($scope, $injector, templateSrv, backendSrv, $q) {
                     var _this = this;
                     _super.call(this, $scope, $injector);
                     this.templateSrv = templateSrv;
                     this.backendSrv = backendSrv;
+                    this.$q = $q;
                     this.metricsDefinition = metrics_1.default;
                     this.EMPTY_DROPDOWN_TEXT = ' - ';
                     this.defaults = {};
@@ -35,14 +36,14 @@ System.register(['lodash', 'app/plugins/sdk', './css/query_editor.css!', './metr
                     this.entitySelectionText = this.EMPTY_DROPDOWN_TEXT;
                     this.metricSelectionText = this.EMPTY_DROPDOWN_TEXT;
                     if (this.target.entityQuery) {
-                        this.onFilterChange(false).then(function (_) {
+                        this.onFilterChange(false).then(function () {
                             if (_this.target.entityType) {
                                 _this.onEntityTypeSelect(false);
                             }
+                            if (_this.target && _this.target.metric) {
+                                _this.target.metric = lodash_1.default.find(_this.availableMetrics, function (m) { return m.key === _this.target.metric.key; });
+                            }
                         });
-                    }
-                    if (this.target.metric) {
-                        this.target.metric = lodash_1.default.find(this.availableMetrics, function (m) { return m.key === _this.target.metric.key; });
                     }
                 }
                 InstanaQueryCtrl.prototype.onFilterChange = function (refresh) {
@@ -53,14 +54,16 @@ System.register(['lodash', 'app/plugins/sdk', './css/query_editor.css!', './metr
                         this.target.metric = null;
                         this.entitySelectionText = this.EMPTY_DROPDOWN_TEXT;
                         this.metricSelectionText = this.EMPTY_DROPDOWN_TEXT;
+                        return this.$q.resolve();
                     }
                     else {
-                        return this.datasource.request('GET', '/api/snapshots/types?q=' + encodeURIComponent(this.target.entityQuery) +
-                            '&time=' + new Date().getTime())
+                        var url = ("/api/snapshots/types?q=" + encodeURIComponent(this.target.entityQuery)) +
+                            ("&time=" + Date.now() + "&newApplicationModelEnabled=" + (this.datasource.newApplicationModelEnabled === true));
+                        return this.datasource.request('GET', url)
                             .then(function (response) {
                             _this.target.queryIsValid = true;
                             _this.uniqueEntityTypes =
-                                lodash_1.default.filter(response.data, function (entityType) { return metrics_1.default[entityType] && metrics_1.default[entityType].label != null; });
+                                lodash_1.default.filter(response.data, function (entityType) { return metrics_1.default[entityType.toLowerCase()] && metrics_1.default[entityType.toLowerCase()].label != null; });
                             _this.entitySelectionText = _this.uniqueEntityTypes.length > 0
                                 ? 'Please select (' + _this.uniqueEntityTypes.length + ')'
                                 : _this.EMPTY_DROPDOWN_TEXT;
@@ -84,7 +87,7 @@ System.register(['lodash', 'app/plugins/sdk', './css/query_editor.css!', './metr
                 };
                 InstanaQueryCtrl.prototype.onEntityTypeSelect = function (refresh) {
                     this.availableMetrics =
-                        lodash_1.default.map(this.metricsDefinition[this.target.entityType].metrics, function (value, key) {
+                        lodash_1.default.map(this.metricsDefinition[this.target.entityType.toLowerCase()].metrics, function (value, key) {
                             return {
                                 "key": key,
                                 "label": value };
